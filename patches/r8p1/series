@@ -31,3 +31,4 @@ r8p1/0036-Fix-build-with-Linux-6.16.patch
 0037-Fix-build-with-Linux-7.0.patch
 0038-Fix-build-with-Linux-7.1.patch
 r8p1/0039-Fix-build-with-Linux-7.1-dma_fence-lock-changes.patch
+r8p1/0040-Fix-build-with-Linux-7.2.patch
