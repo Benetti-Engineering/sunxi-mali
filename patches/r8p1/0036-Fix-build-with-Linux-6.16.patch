@@ -1,0 +1,49 @@
+From fd850dfff8621f4dcc9933cab9ad592b1a201353 Mon Sep 17 00:00:00 2001
+From: Giulio Benetti <giulio.benetti@benettiengineering.com>
+Date: Fri, 6 Nov 2026 16:17:08 +0100
+Subject: [PATCH 36/36] Fix build with Linux 6.16
+
+Commit:
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=2ce07fea3cc8b866f7955a7ce1d62b0cc1f74819
+drops the fence_value_str callback from struct dma_fence_ops so let's not
+define and assign mali_internal_fence_value_str() when Linux version is
+6.16.0 or later.
+
+Signed-off-by: Giulio Benetti <giulio.benetti@benettiengineering.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/devicedrv/mali/linux/mali_internal_sync.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/devicedrv/mali/linux/mali_internal_sync.c b/src/devicedrv/mali/linux/mali_internal_sync.c
+index d034baf..64f6a40 100644
+--- a/src/devicedrv/mali/linux/mali_internal_sync.c
++++ b/src/devicedrv/mali/linux/mali_internal_sync.c
+@@ -736,6 +736,7 @@ static bool mali_internal_fence_enable_signaling(struct fence *fence)
+ 	return true;
+ }
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 16, 0)
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+ static void mali_internal_fence_value_str(struct dma_fence *fence, char *str, int size)
+ #else
+@@ -754,6 +755,7 @@ static void mali_internal_fence_value_str(struct fence *fence, char *str, int si
+ 
+ 	parent->ops->print_sync_pt(sync_pt);
+ }
++#endif
+ 
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+ static const struct dma_fence_ops fence_ops = {
+@@ -770,6 +772,8 @@ static const struct fence_ops fence_ops = {
+ 	.wait = fence_default_wait,
+ #endif
+ 	.release = mali_internal_fence_release,
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 16, 0)
+ 	.fence_value_str = mali_internal_fence_value_str,
++#endif
+ };
+ #endif
+-- 
+2.47.3
+
