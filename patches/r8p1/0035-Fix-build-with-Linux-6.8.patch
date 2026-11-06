@@ -1,0 +1,35 @@
+From f798fad89e3ae1ba4faabcf2f980d0537a6e0f62 Mon Sep 17 00:00:00 2001
+From: Giulio Benetti <giulio.benetti@benettiengineering.com>
+Date: Fri, 6 Nov 2026 16:17:08 +0100
+Subject: [PATCH 35/36] Fix build with Linux 6.8
+
+Commit:
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=d26270061ae66b915138af7cd73ca6f8b85e6b44
+drops strlcpy() so let's use strscpy() instead when Linux version is 6.8.0
+or later.
+
+Signed-off-by: Giulio Benetti <giulio.benetti@benettiengineering.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/devicedrv/mali/linux/mali_internal_sync.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/devicedrv/mali/linux/mali_internal_sync.c b/src/devicedrv/mali/linux/mali_internal_sync.c
+index 42fb057..d034baf 100644
+--- a/src/devicedrv/mali/linux/mali_internal_sync.c
++++ b/src/devicedrv/mali/linux/mali_internal_sync.c
+@@ -165,7 +165,11 @@ struct mali_internal_sync_timeline *mali_internal_sync_timeline_create(const str
+ #else
+ 	sync_timeline->fence_context = fence_context_alloc(1);
+ #endif
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
++	strscpy(sync_timeline->name, name, sizeof(sync_timeline->name));
++#else
+ 	strlcpy(sync_timeline->name, name, sizeof(sync_timeline->name));
++#endif
+ 
+ 	INIT_LIST_HEAD(&sync_timeline->sync_pt_list_head);
+ 	spin_lock_init(&sync_timeline->sync_pt_list_lock);
+-- 
+2.47.3
+
