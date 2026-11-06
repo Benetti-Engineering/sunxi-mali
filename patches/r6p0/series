@@ -28,3 +28,4 @@ r6p0/0024-mali-support-building-against-5.9.patch
 0032-Fix-build-with-Wint-conversion-enabled.patch
 0033-Fix-build-with-Linux-6.15.patch
 0034-mali-Avoid-splitting-lines-across-multiple-printf-calls.patch
+0037-Fix-build-with-Linux-7.0.patch

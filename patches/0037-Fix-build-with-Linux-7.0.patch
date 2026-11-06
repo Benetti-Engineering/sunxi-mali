@@ -1,0 +1,36 @@
+From 96deaaa4114a0d7cd5ca42e96f43ad0b1aeec50e Mon Sep 17 00:00:00 2001
+From: Giulio Benetti <giulio.benetti@benettiengineering.com>
+Date: Fri, 6 Nov 2026 16:17:08 +0100
+Subject: [PATCH 37/38] Fix build with Linux 7.0
+
+Commit:
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=590d356aa433074ece2b0d02faa5f959b26d54d6
+makes shmem_file_setup() take vma_flags_t instead of vm_flags_t so let's
+pass mk_vma_flags(VMA_NORESERVE_BIT) instead of VM_NORESERVE when Linux
+version is 7.0.0 or later.
+
+Signed-off-by: Giulio Benetti <giulio.benetti@benettiengineering.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/devicedrv/mali/linux/mali_memory_swap_alloc.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/devicedrv/mali/linux/mali_memory_swap_alloc.c b/src/devicedrv/mali/linux/mali_memory_swap_alloc.c
+index cdc8525..5fdd149 100755
+--- a/src/devicedrv/mali/linux/mali_memory_swap_alloc.c
++++ b/src/devicedrv/mali/linux/mali_memory_swap_alloc.c
+@@ -82,7 +82,11 @@ _mali_osk_errcode_t mali_mem_swap_init(void)
+ 		return _MALI_OSK_ERR_NOMEM;
+ 	}
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 0, 0)
++	global_swap_file = shmem_file_setup("mali_swap", MALI_SWAP_GLOBAL_SWAP_FILE_SIZE, mk_vma_flags(VMA_NORESERVE_BIT));
++#else
+ 	global_swap_file = shmem_file_setup("mali_swap", MALI_SWAP_GLOBAL_SWAP_FILE_SIZE, VM_NORESERVE);
++#endif
+ 	if (IS_ERR(global_swap_file)) {
+ 		_mali_osk_bitmap_term(&idx_mgr);
+ 		return _MALI_OSK_ERR_NOMEM;
+-- 
+2.47.3
+
