@@ -1,0 +1,58 @@
+From 7b5cb5973984ca1095417f105d587c80601cd4db Mon Sep 17 00:00:00 2001
+From: Giulio Benetti <giulio.benetti@benettiengineering.com>
+Date: Fri, 6 Nov 2026 16:17:08 +0100
+Subject: [PATCH 39/40] Fix build with Linux 7.1 dma_fence lock changes
+
+Commit:
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=1f32f310a13c9fb67a9993ab67f596b3f960206f
+replaces the lock pointer of struct dma_fence with a union of extern_lock
+and inline_lock, so let's use dma_fence_spinlock(),
+dma_fence_lock_irqsave() and dma_fence_unlock_irqrestore() introduced by
+commit:
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=3e5067931b5df667f5350fafe4410554e228e53e
+when Linux version is 7.1.0 or later.
+
+Signed-off-by: Giulio Benetti <giulio.benetti@benettiengineering.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/devicedrv/mali/linux/mali_internal_sync.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/src/devicedrv/mali/linux/mali_internal_sync.c b/src/devicedrv/mali/linux/mali_internal_sync.c
+index 64f6a40..a08f3a8 100644
+--- a/src/devicedrv/mali/linux/mali_internal_sync.c
++++ b/src/devicedrv/mali/linux/mali_internal_sync.c
+@@ -48,7 +48,11 @@ static struct mali_internal_sync_point *mali_internal_fence_to_sync_pt(struct fe
+ static inline struct mali_internal_sync_timeline *mali_internal_sync_pt_to_sync_timeline(struct mali_internal_sync_point *sync_pt)
+ {
+ 	MALI_DEBUG_ASSERT_POINTER(sync_pt);
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
++	return container_of(dma_fence_spinlock(&sync_pt->base), struct mali_internal_sync_timeline, sync_pt_list_lock);
++#else
+ 	return container_of(sync_pt->base.lock, struct mali_internal_sync_timeline, sync_pt_list_lock);
++#endif
+ }
+ 
+ static void mali_internal_sync_timeline_free(struct kref *kref_count)
+@@ -674,10 +678,18 @@ static void mali_internal_fence_release(struct fence *fence)
+ 	parent = mali_internal_sync_pt_to_sync_timeline(sync_pt);
+ 
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
++	dma_fence_lock_irqsave(fence, flags);
++#else
+ 	spin_lock_irqsave(fence->lock, flags);
++#endif
+ 	if (WARN_ON_ONCE(!list_empty(&sync_pt->sync_pt_list)))
+ 		list_del(&sync_pt->sync_pt_list);
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
++	dma_fence_unlock_irqrestore(fence, flags);
++#else
+ 	spin_unlock_irqrestore(fence->lock, flags);
++#endif
+ 
+ 	if (parent->ops->free_pt)
+ 		parent->ops->free_pt(sync_pt);
+-- 
+2.47.3
+
